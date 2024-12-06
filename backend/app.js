@@ -52,23 +52,34 @@ app.get("/instagram", async (req, res) => {
   const posts = await Post.find({}).populate("user");
   res.send(posts);
 });
-
-app.post("/instagram/signup", async (req, res) => {
-  let { username, email, password } = req.body;
-  const newUser = new User(req.body);
-  const registerUser = await User.register(newUser, password);
-  console.log(newUser);
-  res.send(newUser);
+app.get("/instagram/user", async (req, res) => {
+  res.status(200).json(req.user);
 });
+app.post(
+  "/instagram/signup",
+  wrapAsync(async (req, res, next) => {
+    let { username, email, password } = req.body;
+    const newUser = new User(req.body);
+    const registerUser = await User.register(newUser, password);
+    req.login(registerUser, async (err) => {
+      if (err) {
+        return next(err);
+      }
+      console.log(newUser);
+      res.status(200).json(registerUser);
+    });
+  })
+);
 
 app.post("/instagram/login", passport.authenticate("local"), (req, res) => {
   console.log("welcome,you logged in successfully");
   console.log(req.user);
-  res.status(200).json("welcome , u logged in");
+  res.status(200).json(req.user);
 });
 
 app.post(
   "/instagram/post",
+  isLoggedIn,
   upload.array("image", 12),
   wrapAsync(async (req, res) => {
     console.log("request come");
